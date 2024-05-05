@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <stdint.h>
+#include<math.h>
 
 #pragma pack(1) // выравнивание в 1 байт для структур
 
@@ -84,11 +85,52 @@ int cmp_color(RGB color1, RGB color2){
     return color1.r == color2.r && color1.g == color2.g && color1.b == color2.b;
 }
 
+RGB rgb(int r, int g, int b){
+    RGB tmp;
+    tmp.r = r;
+    tmp.g = g;
+    tmp.b = b;
+    return tmp;
+}
+
 void set_color(RGB* cell, RGB color){
     cell->r = color.r;
     cell->g = color.g;
     cell->b = color.b;
 }
+
+void draw_line(BMPFile* bmp_file, RGB color, int x1, int y1, int x2, int y2){
+    int h = bmp_file->dheader.height - 1;
+    y1 = h - y1;
+    y2 = h - y2;
+    if (y1 < 0 || y2 < 0){
+        printf("Error coordinats in draw func!");
+        return;
+    }
+    const int deltaX = abs(x2 - x1);
+    const int deltaY = abs(y2 - y1);
+    const int signX = x1 < x2 ? 1 : -1;
+    const int signY = y1 < y2 ? 1 : -1;
+    int error = deltaX - deltaY;
+    set_color(&((bmp_file->data)[y2][x2]), color);
+    while(x1 != x2 || y1 != y2) 
+   {
+        set_color(&((bmp_file->data)[y1][x1]), color);
+        int error2 = error * 2;
+        if(error2 > -deltaY) 
+        {
+            error -= deltaY;
+            x1 += signX;
+        }
+        if(error2 < deltaX) 
+        {
+            error += deltaX;
+            y1 += signY;
+        }
+    }
+
+}
+
 
 void change_color(BMPFile* input_file, RGB old_color, RGB new_color){
     for (int i = 0; i < input_file->dheader.height; i++){
@@ -122,7 +164,7 @@ int main(int argc, char* argv[]){
     int opt;
     int option_index;
     char* name_output_file = "out.bmp";
-    char* name_of_input_file = "input.bmp";
+    char* name_of_input_file = "file4.bmp";
 
     int s_color_replace = 0;
     int s_ornament = 0;
@@ -169,6 +211,8 @@ int main(int argc, char* argv[]){
     if (s_color_replace){
         change_color(bmp_file, old_color, new_color);
     }
+    draw_line(bmp_file, rgb(255, 0, 0), 100, 100, 799, 599);
+
     writeBMPfile(name_output_file, bmp_file);
     return 0;
 }
