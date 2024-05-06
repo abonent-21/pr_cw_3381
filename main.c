@@ -45,7 +45,8 @@ typedef struct BMPFile{
 BMPFile* loadBMPfile(char* file_name){
     FILE* fp = fopen(file_name, "rb");
     if (!fp){
-        return 1;
+        BMPFile* empty = NULL;
+        return empty;
     }
 
     BMPFile* bmp_file = (BMPFile*)malloc(sizeof(BMPFile)); // выделяем память для основной структуры
@@ -99,10 +100,53 @@ void set_color(RGB* cell, RGB color){
     cell->b = color.b;
 }
 
-void draw_line(BMPFile* bmp_file, RGB color, int x1, int y1, int x2, int y2){
+void fill_circle(BMPFile* bmp_file, RGB color, int x0, int y0, int radius){ 
+    // в функцию подаются уже исправленные координаты (x, y) -> (x, h - y)
+    // (0, 0) -> (0, h)
+    int h = bmp_file->dheader.height;
+    int w = bmp_file->dheader.width;
+    for (int i = -radius; i <= radius; i++){
+        for (int j = -radius; j <= radius; j++){
+            int x_r = x0 + j;
+            int y_r = y0 - i;
+            if (i * i + j * j <= radius * radius &&
+            x_r >= 0 && x_r < w && y_r >= 0 && y_r < h){
+                set_color(&((bmp_file->data)[y_r][x_r]), color);
+            }
+        }
+    }
+
+}
+
+void fill_rectagle(BMPFile* bmp_file, RGB color, int x0, int y0, int radius){
+    // в функцию подаются уже исправленные координаты (x, y) -> (x, h - y)
+    // (0, 0) -> (0, h)
+    int h = bmp_file->dheader.height;
+    int w = bmp_file->dheader.width;
+    for (int i = -radius; i <= radius; i++){
+        for (int j = -radius; j <= radius; j++){
+            int x_r = x0 + j;
+            int y_r = y0 - i;
+            if (x_r >= 0 && x_r < w && y_r >= 0 && y_r < h){
+                set_color(&((bmp_file->data)[y_r][x_r]), color);
+            }
+        }
+    }
+}
+
+
+
+
+void draw_line(BMPFile* bmp_file, RGB color, 
+            int x1, int y1, int x2, int y2, int thikness, char type){
     int h = bmp_file->dheader.height - 1;
+    thikness = thikness - 1;
+    if (thikness < 0){
+        printf("Error sign of thikness");
+        return;
+    }
     y1 = h - y1;
-    y2 = h - y2;
+    y2 = h - y2;    
     if (y1 < 0 || y2 < 0){
         printf("Error coordinats in draw func!");
         return;
@@ -113,9 +157,19 @@ void draw_line(BMPFile* bmp_file, RGB color, int x1, int y1, int x2, int y2){
     const int signY = y1 < y2 ? 1 : -1;
     int error = deltaX - deltaY;
     set_color(&((bmp_file->data)[y2][x2]), color);
+    if (type == 'r'){
+        fill_rectagle(bmp_file, color, x2, y2, thikness);
+    }else{
+        fill_circle(bmp_file, color, x2, y2, thikness);
+    }
     while(x1 != x2 || y1 != y2) 
-   {
+    {
         set_color(&((bmp_file->data)[y1][x1]), color);
+        if (type == 'r'){
+            fill_rectagle(bmp_file, color, x1, y1, thikness);
+        }else{
+            fill_circle(bmp_file, color, x1, y1, thikness);
+        }
         int error2 = error * 2;
         if(error2 > -deltaY) 
         {
@@ -131,6 +185,57 @@ void draw_line(BMPFile* bmp_file, RGB color, int x1, int y1, int x2, int y2){
 
 }
 
+void draw_rectangle(BMPFile* bmp_file, RGB color, int x0, int y0, 
+                    int x1, int y1, int th, char type){
+    int dx = x1 - x0;
+    int dy = y1 - y0;
+    draw_line(bmp_file, color, x0, y0, x0 + dx, y0, th, type);
+    draw_line(bmp_file, color, x0, y0, x0, y0 + dy, th, type);
+    draw_line(bmp_file, color, x0, y0 + dy, x0 + dx, y0 + dy, th, type);
+    draw_line(bmp_file, color, x0 + dx, y0, x0 + dx, y0 + dy, th, type);
+}
+
+void draw_8pixels(BMPFile* bmp_file, int64_t x0, int64_t y0,
+                  int64_t x, int64_t y, int32_t thickness, RGB color)
+{
+    fill_circle(bmp_file, color, x + x0, y + y0, thickness);
+    fill_circle(bmp_file, color ,x + x0, -y + y0, thickness);
+    fill_circle(bmp_file, color, -x + x0, -y + y0, thickness);
+    fill_circle(bmp_file, color, -x + x0, y + y0, thickness);
+    fill_circle(bmp_file, color, y + x0, x + y0, thickness);
+    fill_circle(bmp_file, color, y + x0, -x + y0, thickness);
+    fill_circle(bmp_file, color, -y + x0, -x + y0, thickness);
+    fill_circle(bmp_file, color, -y + x0, x + y0, thickness);
+}
+
+void draw_circle(BMPFile* bmp_file, int64_t x0, int64_t y0, int32_t radius,
+                 int32_t thickness, RGB color,
+                 uint8_t is_fill, RGB fill_color)
+{
+    y0 =  bmp_file->dheader.height - y0;
+    int64_t hor_dist;
+    int64_t diag_dist;
+    int64_t dist;
+
+    int64_t x = 0;
+    int64_t y = radius;
+
+    if (is_fill) {
+        fill_circle(bmp_file, fill_color, x0, y0, radius);
+    }
+   
+    dist = 3 - 2 * y;
+    while (x <= y) {
+        draw_8pixels(bmp_file, x0, y0, x, y, thickness, color);
+        if (dist < 0)
+            dist = dist + 4 * x + 6;
+        else {
+            dist = dist + 4 * (x - y) + 10;
+            y--;
+        }
+        x++; 
+    }
+}
 
 void change_color(BMPFile* input_file, RGB old_color, RGB new_color){
     for (int i = 0; i < input_file->dheader.height; i++){
@@ -211,8 +316,10 @@ int main(int argc, char* argv[]){
     if (s_color_replace){
         change_color(bmp_file, old_color, new_color);
     }
-    draw_line(bmp_file, rgb(255, 0, 0), 100, 100, 799, 599);
-
+    //draw_line(bmp_file, rgb(255, 0, 0), 100, 100, 200, 200, 3, 'r');
+    // draw_rectangle(bmp_file, rgb(0, 255, 0), 30 - 1, 30 - 1, 799 - (30 - 1), 599 - (30 - 1), 30, 'r');
+    // draw_rectangle(bmp_file, rgb(0, 255, 0), 60, 60, 799 - 60, 599 - 60, 30, 'r');
+    draw_circle(bmp_file, 50, 50, 100 , 3, rgb(255, 0, 0), 0, rgb(255, 0, 0));
     writeBMPfile(name_output_file, bmp_file);
     return 0;
 }
