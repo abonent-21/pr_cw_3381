@@ -300,14 +300,62 @@ void draw_semicircles_ornament(BMPFile* bmp_file, RGB color, int thickness, int 
     }
 }
 
+int get_height(BMPFile* bmp_file, int x0, int y0, RGB color){
+    int count = 0;
+    for (int i = y0; i >= 0; i--){
+        if (cmp_color(bmp_file->data[i][x0], color)){
+            count++;
+        }
+        else{
+            return count;
+        }
+    }
+    return count;
+}
+
+int get_width(BMPFile* bmp_file, int x0, int y0, RGB color){
+    int count = 0;
+    for (int i = x0; i < bmp_file->dheader.width; i++){
+        if (cmp_color(bmp_file->data[y0][i], color)){
+            count++;
+        }
+        else{
+            return count;
+        }
+    }
+    return count;
+}
+
+int check_rect(int coords[][4], int len, int x, int y){
+    for (int i = 0; i < len; i++){
+            if (coords[i][0] <= x && x <= coords[i][2] &&
+                coords[i][1] >= y && y >= coords[i][3]){
+                    return 0;
+            }
+        }
+    return 1;
+}
+
 void find_and_border_rectangle(BMPFile* bmp_file, RGB find_color, RGB border_color, int thickness){
-    int coords[0] = {0, 0, 0, 0};
+    int coords[100][4];
     int w = bmp_file->dheader.width;
     int h = bmp_file->dheader.height;
+    int count = 0;
     for (int y = h - 1; y >= 0; y--){
         for (int x = 0; x < w; x++){
-            
+            if (cmp_color((bmp_file->data[y][x]), find_color) &&
+                check_rect(coords, count, x, y)){
+                coords[count][0] = x - 1;
+                coords[count][1] = y + 1;
+                coords[count][2] = x + get_width(bmp_file, x, y, find_color);
+                coords[count][3] = y - get_height(bmp_file, x, y, find_color);
+                count++;
+            }
         }
+    }
+    for (int i = 0; i < count; i++){
+        draw_rectangle(bmp_file, border_color, coords[i][0], coords[i][1],
+                                coords[i][2], coords[i][3], thickness, 0, rgb(0, 0, 0));
     }
 }
 
@@ -343,7 +391,7 @@ int main(int argc, char* argv[]){
     int opt;
     int option_index;
     char* name_output_file = "out.bmp";
-    char* name_of_input_file = "file4.bmp";
+    char* name_of_input_file = "rect.bmp";
 
     int s_color_replace = 0;
     int s_ornament = 0;
@@ -402,7 +450,8 @@ int main(int argc, char* argv[]){
     //draw_rectangle_ornament(bmp_file, 3, rgb(0, 255, 0));
     // draw_rectangle(bmp_file, rgb(0, 255, 0), coords[0], coords[1], coords[2], coords[3], 10, 2, rgb(0, 0, 0));
     //draw_rectangle_ornament(bmp_file, 20, rgb(0, 255, 0), 10);
-    draw_semicircles_ornament(bmp_file, rgb(0, 255, 0), 10, 7);
+    // draw_semicircles_ornament(bmp_file, rgb(0, 255, 0), 10, 7);
+    find_and_border_rectangle(bmp_file, rgb(0, 0, 0), rgb(0, 255, 0), 10);
     writeBMPfile(name_output_file, bmp_file);
     return 0;
 }
