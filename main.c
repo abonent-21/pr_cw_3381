@@ -3,7 +3,8 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <stdint.h>
-#include<math.h>
+#include <math.h>
+#include <string.h>
 
 #pragma pack(1) // выравнивание в 1 байт для структур
 
@@ -371,20 +372,21 @@ void change_color(BMPFile* input_file, RGB old_color, RGB new_color){
 }
 
 
+
 int main(int argc, char* argv[]){
     struct option long_option[] = {
         {"color_replace", no_argument,  0, 'r'},
         {"old_color",   required_argument, 0, 'd'},
         {"new_color",   required_argument, 0, 'n'},
         {"ornament", no_argument,  0, 'o'},
-        {"pattern",   required_argument, 0, 'd'},
+        {"pattern",   required_argument, 0, 'a'},
         {"color",   required_argument, 0, 'c'},
-        {"thickness",   required_argument, 0, 't'},
+        {"thickness",   required_argument, 0, 'k'},
         {"count",   required_argument, 0, 'u'},
         {"filled_rects",   no_argument, 0, 'f'},
         {"border_color",   required_argument, 0, 'b'},
         {"input",   required_argument, 0, 'i'},
-        {"output",   required_argument, 0, 'o'},
+        {"output",   required_argument, 0, 'p'},
         {"help",   required_argument, 0, 'h'},
         {0, 0, 0, 0}
     };
@@ -392,12 +394,15 @@ int main(int argc, char* argv[]){
     int option_index;
     char* name_output_file = "out.bmp";
     char* name_of_input_file = "rect.bmp";
+    
 
+    char figure[100];
     int s_color_replace = 0;
     int s_ornament = 0;
     int s_filled_rects = 0;
     RGB old_color;
     RGB new_color;
+    RGB border_color;
     char* pattern;
     RGB color;
     int thickness;
@@ -406,27 +411,65 @@ int main(int argc, char* argv[]){
 
     while ((opt = getopt_long(argc, argv, "rofd:n:i:o:h", long_option, &option_index)) != -1){
         switch(opt){
-            case 'r':
+            case 'r': // color_replace
                 s_color_replace = 1;
                 break;
-            case 'o':
+            case 'o': // ornament
                 s_ornament = 1;
                 break;
-            case 't':
+            case 't': // filled_rects
                 s_filled_rects = 1;
                 break;
-            case 'd':
+            case 'd': // old_color
                 sscanf(optarg, "%d.%d.%d", &r1, &g1, &b1);
+                if (r1 < 0 || g1 < 0 || b1 < 0){printf("Error color");return;}
                 old_color.r = r1;
                 old_color.g = g1;
                 old_color.b = b1;
                 break;
-            case 'n':
+            case 'n': // new_color
                 sscanf(optarg, "%d.%d.%d", &r1, &g1, &b1);
+                if (r1 < 0 || g1 < 0 || b1 < 0){printf("Error color");return 1;}
                 new_color.r = r1;
                 new_color.g = g1;
                 new_color.b = b1;
                 break;
+            case 'p': // out_put_file
+                sscanf(optarg, "%s", name_output_file);
+                break;
+            case 'i': // input_file
+                sscanf(optarg, "%s", name_of_input_file);
+                break;
+            case 'a': // name figure
+                sscanf(optarg, "%s", figure);
+                break;
+            case 'c': // color
+                sscanf(optarg, "%d.%d.%d", &r1, &g1, &b1);
+                if (r1 < 0 || g1 < 0 || b1 < 0){
+                    printf("Error color\n");
+                    return 1;
+                    }
+                color.r = r1;
+                color.g = g1;
+                color.b = b1;
+            case 'u': // count
+                sscanf(optarg, "%d", &count);
+                if (count < 0){
+                    printf("Error count\n");
+                    return 1; 
+                }
+            case 'k': // thikness
+                sscanf(optarg, "%d", &thickness);
+                if (thickness < 0){
+                    printf("Error thikness\n");
+                    return 1;
+                }
+            case 'b': // border_color
+                sscanf(optarg, "%d.%d.%d", &r1, &g1, &b1);
+                if (r1 < 0 || g1 < 0 || b1 < 0){printf("Error color\n");return 1;}
+                border_color.r = r1;
+                border_color.g = g1;
+                border_color.b = b1; 
         }
 
     }
@@ -435,23 +478,32 @@ int main(int argc, char* argv[]){
     if ((s_color_replace + s_ornament + s_filled_rects) > 1){
         printf("Error of keys\n");
     }
-    if (s_color_replace){
+    else if (s_color_replace){
         change_color(bmp_file, old_color, new_color);
     }
-    int coords[4] = {60, 60, 120, 120};
-    int h = bmp_file->dheader.height;
-    coords[1] = h - coords[1];
-    coords[3] = h - coords[3];
-    // draw_line(bmp_file, rgb(255, 0, 0), coords[0], coords[1], coords[2], coords[3], 3, 'r');
-    if (coords[1] < 0 || coords[3] < 0){printf("Error coord in fill rect"); return;}
-    // draw_rectangle(bmp_file, rgb(0, 255, 0), coords[0], coords[1], coords[2], coords[3], 20, 'r', 0, rgb(255, 0, 0));
-    // draw_circle(bmp_file, coords[2], coords[3], 20, 2, rgb(0, 255, 0), 0, rgb(0, 255, 0));
-    //draw_circle_ornament(bmp_file, rgb(0, 255, 0));
-    //draw_rectangle_ornament(bmp_file, 3, rgb(0, 255, 0));
-    // draw_rectangle(bmp_file, rgb(0, 255, 0), coords[0], coords[1], coords[2], coords[3], 10, 2, rgb(0, 0, 0));
-    //draw_rectangle_ornament(bmp_file, 20, rgb(0, 255, 0), 10);
-    // draw_semicircles_ornament(bmp_file, rgb(0, 255, 0), 10, 7);
-    find_and_border_rectangle(bmp_file, rgb(0, 0, 0), rgb(0, 255, 0), 10);
+    else if (s_ornament){
+        if (!strcmp(figure, "rectangle")){
+            printf("%d\n", thickness);
+            draw_rectangle_ornament(bmp_file, thickness, color, count);
+        }
+        else if (!strcmp(figure, "circle")){
+            draw_circle_ornament(bmp_file, color);
+        }
+        else if (!strcmp(figure, "semicircles")){
+            draw_semicircles_ornament(bmp_file, color, thickness, count);
+        }
+        else{
+            printf("Error pattern!");
+            return 1;
+        }
+    }
+    else if (s_filled_rects){
+        find_and_border_rectangle(bmp_file, color, border_color, thickness);
+    }
+    else{
+        printf("Error main flag!");
+        return 1;
+    }
     writeBMPfile(name_output_file, bmp_file);
     return 0;
 }
