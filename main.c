@@ -409,7 +409,7 @@ int main(int argc, char* argv[]){
     int count;
     int r1, g1, b1;
 
-    while ((opt = getopt_long(argc, argv, "rofd:n:i:o:h", long_option, &option_index)) != -1){
+    while ((opt = getopt_long(argc, argv, "rofd:n:p:i:a:c:u:k:b:h", long_option, &option_index)) != -1){
         switch(opt){
             case 'r': // color_replace
                 s_color_replace = 1;
@@ -417,12 +417,12 @@ int main(int argc, char* argv[]){
             case 'o': // ornament
                 s_ornament = 1;
                 break;
-            case 't': // filled_rects
+            case 'f': // filled_rects
                 s_filled_rects = 1;
                 break;
             case 'd': // old_color
                 sscanf(optarg, "%d.%d.%d", &r1, &g1, &b1);
-                if (r1 < 0 || g1 < 0 || b1 < 0){printf("Error color");return;}
+                if (r1 < 0 || g1 < 0 || b1 < 0){printf("Error color");return 1;}
                 old_color.r = r1;
                 old_color.g = g1;
                 old_color.b = b1;
@@ -452,24 +452,30 @@ int main(int argc, char* argv[]){
                 color.r = r1;
                 color.g = g1;
                 color.b = b1;
+                break;
             case 'u': // count
                 sscanf(optarg, "%d", &count);
                 if (count < 0){
                     printf("Error count\n");
                     return 1; 
                 }
-            case 'k': // thikness
+                break;
+            case 'k': // thickness
                 sscanf(optarg, "%d", &thickness);
-                if (thickness < 0){
+                printf("Thickness - %d\n", thickness);
+                printf("%s\n", optarg);
+                if (thickness <= 0){
                     printf("Error thikness\n");
                     return 1;
                 }
+                break;
             case 'b': // border_color
                 sscanf(optarg, "%d.%d.%d", &r1, &g1, &b1);
                 if (r1 < 0 || g1 < 0 || b1 < 0){printf("Error color\n");return 1;}
                 border_color.r = r1;
                 border_color.g = g1;
                 border_color.b = b1; 
+                break;
         }
 
     }
