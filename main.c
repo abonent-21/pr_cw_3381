@@ -393,7 +393,7 @@ int main(int argc, char* argv[]){
     int opt;
     int option_index;
     char* name_output_file = "out.bmp";
-    char* name_of_input_file = "rect.bmp";
+    char* name_of_input_file = "input.bmp";
     
 
     char figure[100];
