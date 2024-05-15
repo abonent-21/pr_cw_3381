@@ -46,14 +46,28 @@ typedef struct BMPFile{
 
 BMPFile* loadBMPfile(char* file_name){
     FILE* fp = fopen(file_name, "rb");
+    
     if (!fp){
-        BMPFile* empty = NULL;
-        return empty;
+        printf("File didn't be open");
+        exit(1);
     }
 
     BMPFile* bmp_file = (BMPFile*)malloc(sizeof(BMPFile)); // выделяем память для основной структуры
     fread(&(bmp_file->bheader), sizeof(BMPHeader), 1, fp); // считываем заголовки
     fread(&(bmp_file->dheader), sizeof(DIBHeader), 1, fp);
+    
+    bmp_file->bheader.ID[2] = '\0';
+    if (strcmp(bmp_file->bheader.ID, "BM")) {
+        printf("File doesn't have ID BM\n");
+        exit(1);
+
+    }  
+
+    if (bmp_file->dheader.bit_per_pixel != 24 || bmp_file->dheader.comp != 0) {
+        printf("Error of bit_per_pixel or compression\n");
+        exit(1);
+    }
+
 
     int w = bmp_file->dheader.width;
     int h = bmp_file->dheader.height;
@@ -371,6 +385,20 @@ void change_color(BMPFile* input_file, RGB old_color, RGB new_color){
     }
 }
 
+void print_help_info(){
+    printf("Функция замены цвета --color_replace -r\n");
+    printf("Устновить старый цвет --old_color -d\n");
+    printf("Установить новый цвет --new_color -n\n");
+    printf("Функция отрисовки орнамента --ornament -o\n");
+    printf("Аргумент для фигуры орнамента --pattern -a\n");
+    printf("Установить цвет --color -c\n");
+    printf("Аргумент для установки толщины --thickness -k\n");
+    printf("Аргумент для установки количества --count -u\n");
+    printf("Функция для нахождения залитых прямоугольников --filled_rects -f\n");
+    printf("Аргумент для цвета границы --border_color -b\n");
+    printf("Аргумент для входного файла --input -i\n");
+    printf("Аргумент для выходного файла --output -p\n");
+}
 
 
 int main(int argc, char* argv[]){
@@ -400,6 +428,8 @@ int main(int argc, char* argv[]){
     int s_color_replace = 0;
     int s_ornament = 0;
     int s_filled_rects = 0;
+    int help_info = 0;
+    int input_name = 0;
     RGB old_color;
     RGB new_color;
     RGB border_color;
@@ -420,25 +450,35 @@ int main(int argc, char* argv[]){
             case 'f': // filled_rects
                 s_filled_rects = 1;
                 break;
+            case 'h': // help_info
+                help_info = 1;
+                break;
             case 'd': // old_color
                 sscanf(optarg, "%d.%d.%d", &r1, &g1, &b1);
-                if (r1 < 0 || g1 < 0 || b1 < 0){printf("Error color");return 1;}
+                if (r1 < 0 || g1 < 0 || b1 < 0){
+                    printf("Error color\n");
+                    return 1;
+                }
                 old_color.r = r1;
                 old_color.g = g1;
                 old_color.b = b1;
                 break;
             case 'n': // new_color
                 sscanf(optarg, "%d.%d.%d", &r1, &g1, &b1);
-                if (r1 < 0 || g1 < 0 || b1 < 0){printf("Error color");return 1;}
+                if (r1 < 0 || g1 < 0 || b1 < 0){
+                    printf("Error color\n");
+                    return 1;
+                }
                 new_color.r = r1;
                 new_color.g = g1;
                 new_color.b = b1;
                 break;
             case 'p': // out_put_file
-                sscanf(optarg, "%s", name_output_file);
+                sscanf(optarg, "./%s", name_output_file);
                 break;
             case 'i': // input_file
-                sscanf(optarg, "%s", name_of_input_file);
+                sscanf(optarg, "./%s", name_of_input_file);
+                input_name = 1;
                 break;
             case 'a': // name figure
                 sscanf(optarg, "%s", figure);
@@ -479,9 +519,14 @@ int main(int argc, char* argv[]){
         }
 
     }
+
+    if (!input_name){
+        name_of_input_file = strdup(argv[argc - 1]);
+    }
+
     BMPFile* bmp_file =  loadBMPfile(name_of_input_file);
 
-    if ((s_color_replace + s_ornament + s_filled_rects) > 1){
+    if ((s_color_replace + s_ornament + s_filled_rects + help_info) > 1){
         printf("Error of keys\n");
     }
     else if (s_color_replace){
@@ -499,15 +544,20 @@ int main(int argc, char* argv[]){
             draw_semicircles_ornament(bmp_file, color, thickness, count);
         }
         else{
-            printf("Error pattern!");
+            printf("Error pattern!\n");
             return 1;
         }
     }
     else if (s_filled_rects){
         find_and_border_rectangle(bmp_file, color, border_color, thickness);
     }
+    else if (help_info){
+        print_help_info();
+        return 0;
+    }
     else{
-        printf("Error main flag!");
+        printf("Error main flag!\n");
+        printf("Функция для справки --help -h\n");
         return 1;
     }
     writeBMPfile(name_output_file, bmp_file);
