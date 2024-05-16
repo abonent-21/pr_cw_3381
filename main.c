@@ -6,7 +6,7 @@
 #include <math.h>
 #include <string.h>
 
-#pragma pack(1) // выравнивание в 1 байт для структур
+#pragma pack(push, 1) // выравнивание в 1 байт для структур
 
 typedef struct BMPHeader{
     char ID[2];
@@ -42,14 +42,14 @@ typedef struct BMPFile{
     RGB** data;
 }BMPFile;
 
-#pragma pop
+#pragma pack(pop)
 
 BMPFile* loadBMPfile(char* file_name){
     FILE* fp = fopen(file_name, "rb");
     
     if (!fp){
-        printf("File didn't be open");
-        exit(1);
+        // printf("File didn't be open");
+        exit(45);
     }
 
     BMPFile* bmp_file = (BMPFile*)malloc(sizeof(BMPFile)); // выделяем память для основной структуры
@@ -58,14 +58,14 @@ BMPFile* loadBMPfile(char* file_name){
     
     bmp_file->bheader.ID[2] = '\0';
     if (strcmp(bmp_file->bheader.ID, "BM")) {
-        printf("File doesn't have ID BM\n");
-        exit(1);
+        // printf("File doesn't have ID BM\n");
+        exit(45);
 
     }  
 
     if (bmp_file->dheader.bit_per_pixel != 24 || bmp_file->dheader.comp != 0) {
-        printf("Error of bit_per_pixel or compression\n");
-        exit(1);
+        // printf("Error of bit_per_pixel or compression\n");
+        exit(45);
     }
 
 
@@ -136,11 +136,10 @@ void fill_circle(BMPFile* bmp_file, RGB color, int x0, int y0, int radius){
 
 void draw_line(BMPFile* bmp_file, RGB color, 
             int x1, int y1, int x2, int y2, int thickness){
-    int h = bmp_file->dheader.height;
-
     thickness = thickness - 1;
     if (thickness < 0){
-        printf("Error sign of thickness");
+        //printf("Error sign of thickness");
+        exit(45);
         return;
     }
 
@@ -216,19 +215,16 @@ void draw_8pixels(BMPFile* bmp_file, int64_t x0, int64_t y0,
 
 void draw_circle(BMPFile* bmp_file, int64_t x0, int64_t y0, int32_t radius,
                  int32_t thickness, RGB color,
-                 uint8_t is_fill, RGB fill_color)
-{
-    int64_t hor_dist;
-    int64_t diag_dist;
+                 uint8_t is_fill, RGB fill_color){
     int64_t dist;
 
     int64_t x = 0;
     int64_t y = radius;
     
-    thickness = thickness - 1;
+    thickness = (thickness - 1) / 2;
 
     if (thickness < 0){
-        printf("Error sign of thickness");
+        // printf("Error sign of thickness");
         return;
     }
 
@@ -385,23 +381,39 @@ void change_color(BMPFile* input_file, RGB old_color, RGB new_color){
     }
 }
 
-void print_help_info(){
-    printf("Функция замены цвета --color_replace -r\n");
-    printf("Устновить старый цвет --old_color -d\n");
-    printf("Установить новый цвет --new_color -n\n");
-    printf("Функция отрисовки орнамента --ornament -o\n");
-    printf("Аргумент для фигуры орнамента --pattern -a\n");
-    printf("Установить цвет --color -c\n");
-    printf("Аргумент для установки толщины --thickness -k\n");
-    printf("Аргумент для установки количества --count -u\n");
-    printf("Функция для нахождения залитых прямоугольников --filled_rects -f\n");
-    printf("Аргумент для цвета границы --border_color -b\n");
-    printf("Аргумент для входного файла --input -i\n");
-    printf("Аргумент для выходного файла --output -p\n");
+void print_help_info(char* file_name){
+    printf("Usage: %s [OPTIONS] FILE\n", file_name);
+    printf("%4s  %-40s\n\t %-30s\n",
+           "-h,", "--help", "print this help and exit");
+    printf("%4s  %-40s\n\t %-30s\n",
+           "-r,", "--color_repalce", "to repace pixel in new color");
+    printf("%4s  %-40s\n\t %-30s\n",
+           "-d,", "--old_color", "arg to set old_color");
+    printf("%4s  %-40s\n\t %-30s\n",
+           "-n,", "--new_color", "arg to set new color");
+    printf("%4s  %-40s\n\t %-30s\n",
+           "-o,", "--ornament", "func to draw ornament");
+    printf("%4s  %-40s\n\t %-30s\n",
+           "-a,", "--pattern", "arg to set type of pattern");
+    printf("%4s  %-40s\n\t %-30s\n",
+           "-c,", "--color", "arg to set color");
+    printf("%4s  %-40s\n\t %-30s\n",
+           "-k,", "--thickness", "arg to set thickness");
+    printf("%4s  %-40s\n\t %-30s\n",
+           "-u,", "--count", "arg to set count");
+    printf("%4s  %-40s\n\t %-30s\n",
+           "-f,", "--filled_rects", "func to find and border filled rects");
+    printf("%4s  %-40s\n\t %-30s\n",
+           "-b,", "--border_color", "arg to set border color");
+    printf("%4s  %-40s\n\t %-30s\n",
+           "-i,", "--input", "name of input file");
+    printf("%4s  %-40s\n\t %-30s\n",
+           "-o,", "--output", "name of output file");
 }
 
 
 int main(int argc, char* argv[]){
+    printf("Course work for option 4.10, created by Georgii Kozlov\n");
     struct option long_option[] = {
         {"color_replace", no_argument,  0, 'r'},
         {"old_color",   required_argument, 0, 'd'},
@@ -415,13 +427,13 @@ int main(int argc, char* argv[]){
         {"border_color",   required_argument, 0, 'b'},
         {"input",   required_argument, 0, 'i'},
         {"output",   required_argument, 0, 'p'},
-        {"help",   required_argument, 0, 'h'},
+        {"help",   no_argument, 0, 'h'},
         {0, 0, 0, 0}
     };
     int opt;
     int option_index;
-    char* name_output_file = "out.bmp";
-    char* name_of_input_file = "input.bmp";
+    char name_output_file[100] = "out.bmp";
+    char name_of_input_file[100] = "input.bmp";
     
 
     char figure[100];
@@ -433,13 +445,12 @@ int main(int argc, char* argv[]){
     RGB old_color;
     RGB new_color;
     RGB border_color;
-    char* pattern;
     RGB color;
     int thickness;
     int count;
     int r1, g1, b1;
 
-    while ((opt = getopt_long(argc, argv, "rofd:n:p:i:a:c:u:k:b:h", long_option, &option_index)) != -1){
+    while ((opt = getopt_long(argc, argv, "rofhd:n:p:i:a:c:u:k:b:", long_option, &option_index)) != -1){
         switch(opt){
             case 'r': // color_replace
                 s_color_replace = 1;
@@ -456,8 +467,8 @@ int main(int argc, char* argv[]){
             case 'd': // old_color
                 sscanf(optarg, "%d.%d.%d", &r1, &g1, &b1);
                 if (r1 < 0 || g1 < 0 || b1 < 0){
-                    printf("Error color\n");
-                    return 1;
+                    // printf("Error color\n");
+                    exit(45);
                 }
                 old_color.r = r1;
                 old_color.g = g1;
@@ -466,8 +477,8 @@ int main(int argc, char* argv[]){
             case 'n': // new_color
                 sscanf(optarg, "%d.%d.%d", &r1, &g1, &b1);
                 if (r1 < 0 || g1 < 0 || b1 < 0){
-                    printf("Error color\n");
-                    return 1;
+                    // printf("Error color\n");
+                    exit(45);
                 }
                 new_color.r = r1;
                 new_color.g = g1;
@@ -486,8 +497,8 @@ int main(int argc, char* argv[]){
             case 'c': // color
                 sscanf(optarg, "%d.%d.%d", &r1, &g1, &b1);
                 if (r1 < 0 || g1 < 0 || b1 < 0){
-                    printf("Error color\n");
-                    return 1;
+                    // printf("Error color\n");
+                    exit(45);
                     }
                 color.r = r1;
                 color.g = g1;
@@ -496,22 +507,23 @@ int main(int argc, char* argv[]){
             case 'u': // count
                 sscanf(optarg, "%d", &count);
                 if (count < 0){
-                    printf("Error count\n");
-                    return 1; 
+                    // printf("Error count\n");
+                    exit(45);
                 }
                 break;
             case 'k': // thickness
                 sscanf(optarg, "%d", &thickness);
-                printf("Thickness - %d\n", thickness);
-                printf("%s\n", optarg);
                 if (thickness <= 0){
-                    printf("Error thikness\n");
-                    return 1;
+                    // printf("Error thikness\n");
+                    exit(45);
                 }
                 break;
             case 'b': // border_color
                 sscanf(optarg, "%d.%d.%d", &r1, &g1, &b1);
-                if (r1 < 0 || g1 < 0 || b1 < 0){printf("Error color\n");return 1;}
+                if (r1 < 0 || g1 < 0 || b1 < 0){
+                    // printf("Error color\n");
+                    exit(45);
+                }
                 border_color.r = r1;
                 border_color.g = g1;
                 border_color.b = b1; 
@@ -520,21 +532,26 @@ int main(int argc, char* argv[]){
 
     }
 
-    if (!input_name){
-        name_of_input_file = strdup(argv[argc - 1]);
+    if (help_info){
+        print_help_info(name_of_input_file);
+        return 0;
+    }
+
+    if (!input_name && argc > 1){
+        strcpy(name_of_input_file, argv[argc - 1]);
     }
 
     BMPFile* bmp_file =  loadBMPfile(name_of_input_file);
 
     if ((s_color_replace + s_ornament + s_filled_rects + help_info) > 1){
-        printf("Error of keys\n");
+        // printf("Error of keys\n");
+        exit(45);
     }
     else if (s_color_replace){
         change_color(bmp_file, old_color, new_color);
     }
     else if (s_ornament){
         if (!strcmp(figure, "rectangle")){
-            printf("%d\n", thickness);
             draw_rectangle_ornament(bmp_file, thickness, color, count);
         }
         else if (!strcmp(figure, "circle")){
@@ -545,20 +562,16 @@ int main(int argc, char* argv[]){
         }
         else{
             printf("Error pattern!\n");
-            return 1;
+            exit(45);
         }
     }
     else if (s_filled_rects){
         find_and_border_rectangle(bmp_file, color, border_color, thickness);
     }
-    else if (help_info){
-        print_help_info();
-        return 0;
-    }
     else{
-        printf("Error main flag!\n");
-        printf("Функция для справки --help -h\n");
-        return 1;
+        // printf("Error main flag!\n");
+        // printf("Функция для справки --help -h\n");
+        exit(45);
     }
     writeBMPfile(name_output_file, bmp_file);
     return 0;
